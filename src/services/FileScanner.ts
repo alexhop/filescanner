@@ -6,6 +6,7 @@ import { DataSource } from 'typeorm';
 import { File } from '../database/entities/File';
 import { ScanPath } from '../database/entities/ScanPath';
 import { ScanSession } from '../database/entities/ScanSession';
+import { MetadataExtractor } from './MetadataExtractor';
 
 export interface ScanProgress {
   filesScanned: number;
@@ -22,6 +23,8 @@ export class FileScanner extends EventEmitter {
   private currentSession: ScanSession | null = null;
   private scanQueue: string[] = [];
   private hashQueue: File[] = [];
+  private metadataQueue: File[] = [];
+  private metadataExtractor: MetadataExtractor;
   private progress: ScanProgress = {
     filesScanned: 0,
     foldersScanned: 0,
@@ -33,6 +36,7 @@ export class FileScanner extends EventEmitter {
   constructor(dataSource: DataSource) {
     super();
     this.dataSource = dataSource;
+    this.metadataExtractor = new MetadataExtractor();
   }
 
   async startScan(paths: string[]): Promise<void> {
@@ -64,8 +68,13 @@ export class FileScanner extends EventEmitter {
     this.emit('scan:started', this.progress);
 
     try {
-      await this.performScan();
-      await this.performHashing();
+      // Start concurrent scanning phases
+      const scanPromise = this.performScan();
+      const hashingPromise = this.performHashingConcurrently();
+      const metadataPromise = this.performMetadataExtractionConcurrently();
+
+      // Wait for all phases to complete
+      await Promise.all([scanPromise, hashingPromise, metadataPromise]);
       await this.findDuplicates();
 
       this.currentSession.status = 'completed';
@@ -188,6 +197,11 @@ export class FileScanner extends EventEmitter {
 
         await fileRepo.save(existingFile);
         this.hashQueue.push(existingFile);
+
+        // Add to metadata queue if it's a media file
+        if (this.metadataExtractor.isMediaFile(filePath)) {
+          this.metadataQueue.push(existingFile);
+        }
       } else {
         const newFile = fileRepo.create({
           filePath,
@@ -203,17 +217,33 @@ export class FileScanner extends EventEmitter {
 
         const savedFile = await fileRepo.save(newFile);
         this.hashQueue.push(savedFile);
+
+        // Add to metadata queue if it's a media file
+        if (this.metadataExtractor.isMediaFile(filePath)) {
+          this.metadataQueue.push(savedFile);
+        }
       }
     } catch (error) {
       console.error(`Error processing file ${filePath}:`, error);
     }
   }
 
-  private async performHashing(): Promise<void> {
+  private async performHashingConcurrently(): Promise<void> {
     const fileRepo = this.dataSource.getRepository(File);
     const batchSize = 10;
 
-    while (this.hashQueue.length > 0 && !this.isPaused) {
+    // Continue processing until scanning is done and queue is empty
+    while (this.isScanning || this.hashQueue.length > 0) {
+      if (this.isPaused) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
+      if (this.hashQueue.length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
       const batch = this.hashQueue.splice(0, batchSize);
 
       await Promise.all(batch.map(async (file) => {
@@ -235,6 +265,35 @@ export class FileScanner extends EventEmitter {
           }
         } catch (error) {
           console.error(`Error hashing file ${file.filePath}:`, error);
+        }
+      }));
+    }
+  }
+
+  private async performMetadataExtractionConcurrently(): Promise<void> {
+    const fileRepo = this.dataSource.getRepository(File);
+    const batchSize = 5;
+
+    // Continue processing until scanning is done and queue is empty
+    while (this.isScanning || this.metadataQueue.length > 0) {
+      if (this.isPaused) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
+      if (this.metadataQueue.length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
+      const batch = this.metadataQueue.splice(0, batchSize);
+
+      await Promise.all(batch.map(async (file) => {
+        try {
+          await this.metadataExtractor.extractMetadata(file);
+          await fileRepo.save(file);
+        } catch (error) {
+          console.error(`Error extracting metadata for ${file.filePath}:`, error);
         }
       }));
     }

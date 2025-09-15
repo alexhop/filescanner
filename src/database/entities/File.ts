@@ -33,6 +33,9 @@ export class File {
   hashCalculated!: boolean;
 
   @Column({ type: 'text', nullable: true })
+  perceptualHash?: string;
+
+  @Column({ type: 'text', nullable: true })
   mimeType?: string;
 
   @CreateDateColumn()
@@ -46,4 +49,57 @@ export class File {
 
   @Column({ type: 'datetime', nullable: true })
   lastScanned?: Date;
+
+  // Media metadata (photos/videos)
+  @Column({ type: 'datetime', nullable: true })
+  mediaTakenDate?: Date;
+
+  @Column({ type: 'float', nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'float', nullable: true })
+  longitude?: number;
+
+  @Column({ type: 'text', nullable: true })
+  cameraModel?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  imageWidth?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  imageHeight?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  videoDuration?: number; // in seconds
+
+  @Column({ type: 'text', nullable: true })
+  videoCodec?: string;
+
+  // Music metadata
+  @Column({ type: 'text', nullable: true })
+  artist?: string;
+
+  @Column({ type: 'text', nullable: true })
+  album?: string;
+
+  @Column({ type: 'text', nullable: true })
+  albumArtist?: string;
+
+  @Column({ type: 'text', nullable: true })
+  title?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  trackNumber?: number;
+
+  @Column({ type: 'text', nullable: true })
+  genre?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  year?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  bitrate?: number;
+
+  @Column({ type: 'text', nullable: true })
+  audioFormat?: string;
 }

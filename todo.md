@@ -31,11 +31,12 @@
 
 ## In Progress 🚧
 
-### GitHub Integration
-- [ ] Initialize git repository
-- [ ] Create GitHub repository
-- [ ] Set up GitHub Actions for CI/CD
-- [ ] Configure automatic releases
+### Media & Music Metadata Extraction
+- [ ] Install exifr for image EXIF data extraction
+- [ ] Install music-metadata for audio file metadata
+- [ ] Install fluent-ffmpeg for video metadata
+- [ ] Add metadata fields to File entity
+- [ ] Implement metadata extraction in FileScanner
 
 ## Pending 📋
 
@@ -58,12 +59,22 @@
 - [ ] Implement chunked file reading for large files
 - [ ] Add caching for frequently accessed data
 
+### Concurrent Two-Phase Scanning
+- [ ] Implement concurrent metadata collection and hashing
+- [ ] Add worker threads for parallel processing
+- [ ] Optimize queue management for better performance
+
+### File System Watching
+- [ ] Integrate chokidar for real-time file monitoring
+- [ ] Auto-detect new/modified/deleted files
+- [ ] Update database in real-time
+
 ### Additional Features
-- [ ] **AI Integration**
-  - [ ] Research local AI models (llama.cpp, ONNX)
+- [ ] **AI Integration (Local Models)**
+  - [ ] Research and integrate Ollama for local AI
   - [ ] Implement AI recommendation service
   - [ ] Create UI for AI suggestions
-  - [ ] Add batch AI analysis
+  - [ ] Add batch AI analysis for file cleanup recommendations
 
 - [ ] **Advanced Detection**
   - [ ] Implement perceptual hashing for images

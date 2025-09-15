@@ -38,6 +38,7 @@ If the file is media that contains it keep track of
 - Time picture/video taken
 - Geolocation
 - Other photo metadata
+- Fingerprint coding for images so the same image can be detected even if its resized
 For songs (mp3, wma, flac, other formats) keep track of
 - Album
 - Artist
@@ -52,7 +53,7 @@ For songs (mp3, wma, flac, other formats) keep track of
 - **Background scanning**: Performs scans without blocking the UI
 - **Two-phase scanning**:
   1. First pass: Collect file metadata (name, dates, type, size)
-  2. Second pass: Calculate and store file content hashes
+  2. Second pass: Calculate and store file content hashes. This can go on at the same time as the first pass.
 - **Resume capability**: Maintains scan status in database to resume interrupted scans
 - **Incremental scanning**: Detects changed files since last scan
   - Skip hash recalculation for unchanged files (same modification date and size)
@@ -124,6 +125,7 @@ Main application view showing:
 
 - **Complete test coverage**: Comprehensive test cases for all functionality
 - **Documentation**: Full documentation of features and usage
+- **Error Handling**: Clear error handling for all exceptions. Scans should save progress as they go in the database so errors don't require restarting from the beginning.
 
 ### Github
 
@@ -182,3 +184,69 @@ Based on the requirements and to ensure cross-platform compatibility, I recommen
 - **Build**: electron-builder for packaging
 
 This stack provides excellent cross-platform support, a rich ecosystem, and rapid development capabilities.
+
+## Technical Implementation Details
+
+### Architecture Overview
+
+The application uses a modular architecture with clear separation of concerns:
+
+- **Main Process (Electron)**: Handles file system operations, database management, and IPC communication
+- **Renderer Process (React)**: Manages the UI and user interactions
+- **Database Layer (TypeORM + SQLite)**: Stores file metadata and scan history
+- **Service Layer**: Business logic for scanning, hashing, and duplicate detection
+
+### Key Components
+
+#### 1. FileScanner Service
+- **Concurrent Processing**: Implements three concurrent phases:
+  - File discovery and metadata collection
+  - SHA-256 hash calculation
+  - Media metadata extraction (EXIF, ID3 tags)
+- **Resume Capability**: Saves progress to database after every batch
+- **Incremental Scanning**: Skips unchanged files based on modification date and size
+
+#### 2. MetadataExtractor Service
+- **Image Metadata**: Extracts EXIF data including GPS coordinates, camera model, and dimensions
+- **Perceptual Hashing**: Uses imghash library to generate perceptual hashes for image similarity detection
+- **Audio Metadata**: Extracts ID3 tags including artist, album, track number, and bitrate
+- **Video Metadata**: Basic support for duration and codec information
+
+#### 3. Database Schema
+- **File Entity**: Extended with metadata fields for media files
+  - Basic: name, path, size, dates, hash
+  - Media: GPS coordinates, camera info, dimensions
+  - Audio: artist, album, title, bitrate, format
+  - Image: perceptual hash for similarity matching
+- **ScanSession Entity**: Tracks scan progress and status
+- **ScanPath Entity**: Manages directories to scan
+
+#### 4. UI Components
+- **Material-UI**: Provides consistent, responsive design
+- **Real-time Updates**: Uses IPC channels for progress updates
+- **Expandable Lists**: Groups duplicates by hash with collapsible sections
+- **Filtering & Sorting**: Multiple options for organizing results
+
+### Performance Optimizations
+
+1. **Batch Processing**: Processes files in batches to reduce database overhead
+2. **Concurrent Operations**: Runs hashing and metadata extraction in parallel with scanning
+3. **Database Indexing**: Indexes on hash, filePath, and (modifiedDate, size) for fast queries
+4. **Incremental Updates**: Only recalculates hashes for modified files
+
+### Libraries and Technologies
+
+- **exifr**: Lightweight EXIF data extraction
+- **music-metadata**: Comprehensive audio metadata parsing
+- **imghash**: Perceptual hashing for image similarity
+- **sharp**: High-performance image processing
+- **chokidar**: Cross-platform file system watching
+- **TypeORM**: Type-safe database operations
+- **SQLite**: Embedded database for local storage
+
+### Error Handling
+
+- **Graceful Degradation**: Continues scanning even if individual files fail
+- **Progress Persistence**: Saves state regularly to resume after crashes
+- **Detailed Logging**: Logs errors with context for debugging
+- **User Feedback**: Shows clear error messages in the UI

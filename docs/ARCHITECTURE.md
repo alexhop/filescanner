@@ -14,6 +14,13 @@ FileScanner is built using Electron for cross-platform desktop application devel
 - **SQLite3**: Local database
 - **TypeORM 0.3.26**: Object-relational mapping
 
+### Media Processing
+- **exifr 7.1.3**: EXIF metadata extraction
+- **music-metadata 11.8.3**: Audio file metadata
+- **imghash 1.1.0**: Perceptual image hashing
+- **sharp 0.34.3**: High-performance image processing
+- **chokidar 4.0.3**: File system watching
+
 ### Build Tools
 - **Webpack 5**: Module bundler
 - **electron-builder**: Application packaging
@@ -29,6 +36,8 @@ FileScanner is built using Electron for cross-platform desktop application devel
 │  - IPC Communication                        │
 │  - Database Operations                      │
 │  - File System Access                       │
+│  - Concurrent Processing                    │
+│  - Metadata Extraction                      │
 └──────────────────┬──────────────────────────┘
                    │ IPC
 ┌──────────────────▼──────────────────────────┐
