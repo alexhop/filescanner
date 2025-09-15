@@ -26,6 +26,7 @@ export class FileScanner extends EventEmitter {
   private hashQueue: File[] = [];
   private metadataQueue: File[] = [];
   private metadataExtractor: MetadataExtractor;
+  private scanningComplete: boolean = false; // Add flag to track when scanning is done
   private progress: ScanProgress = {
     filesScanned: 0,
     foldersScanned: 0,
@@ -47,6 +48,7 @@ export class FileScanner extends EventEmitter {
 
     this.isScanning = true;
     this.isPaused = false;
+    this.scanningComplete = false; // Reset flag
     this.scanQueue = [...paths];
     this.hashQueue = [];
     this.progress = {
@@ -120,6 +122,9 @@ export class FileScanner extends EventEmitter {
         console.error(`Error scanning ${scanPath}:`, error);
       }
     }
+
+    // Mark scanning as complete
+    this.scanningComplete = true;
   }
 
   private async scanDirectory(dirPath: string, fileRepo: any): Promise<void> {
@@ -192,7 +197,7 @@ export class FileScanner extends EventEmitter {
         existingFile.modifiedDate = stats.mtime;
         existingFile.size = stats.size;
         existingFile.hashCalculated = false;
-        existingFile.hash = null;
+        existingFile.hash = undefined;
         existingFile.lastScanned = new Date();
         existingFile.isDeleted = false;
 
@@ -233,8 +238,8 @@ export class FileScanner extends EventEmitter {
     const fileRepo = this.dataSource.getRepository(File);
     const batchSize = 10;
 
-    // Continue processing until scanning is done and queue is empty
-    while (this.isScanning || this.hashQueue.length > 0) {
+    // Continue processing until scanning is done AND queue is empty
+    while (!this.scanningComplete || this.hashQueue.length > 0) {
       if (this.isPaused) {
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
@@ -275,8 +280,8 @@ export class FileScanner extends EventEmitter {
     const fileRepo = this.dataSource.getRepository(File);
     const batchSize = 5;
 
-    // Continue processing until scanning is done and queue is empty
-    while (this.isScanning || this.metadataQueue.length > 0) {
+    // Continue processing until scanning is done AND queue is empty
+    while (!this.scanningComplete || this.metadataQueue.length > 0) {
       if (this.isPaused) {
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
@@ -347,6 +352,7 @@ export class FileScanner extends EventEmitter {
   stopScan(): void {
     this.isPaused = true;
     this.isScanning = false;
+    this.scanningComplete = true; // Mark as complete to stop concurrent operations
     this.scanQueue = [];
     this.hashQueue = [];
     this.emit('scan:stopped');
