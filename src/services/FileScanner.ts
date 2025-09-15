@@ -7,6 +7,7 @@ import { File } from '../database/entities/File';
 import { ScanPath } from '../database/entities/ScanPath';
 import { ScanSession } from '../database/entities/ScanSession';
 import { MetadataExtractor } from './MetadataExtractor';
+import { FileSystemErrorHandler, DatabaseErrorHandler, ErrorRecovery } from '../utils/ErrorHandler';
 
 export interface ScanProgress {
   filesScanned: number;

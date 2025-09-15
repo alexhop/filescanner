@@ -1,5 +1,4 @@
 import * as exifr from 'exifr';
-import * as mm from 'music-metadata';
 import * as path from 'path';
 import * as fs from 'fs';
 import { hash as imghash } from 'imghash';
@@ -31,8 +30,7 @@ export class MetadataExtractor {
       const metadata = await exifr.parse(file.filePath, {
         gps: true,
         xmp: true,
-        ifd0: true,
-        exif: true,
+        exif: true
       });
 
       if (metadata) {
@@ -65,7 +63,7 @@ export class MetadataExtractor {
 
       // Calculate perceptual hash for image similarity detection
       try {
-        const hashData = await imghash.hash(file.filePath, 16);
+        const hashData = await imghash(file.filePath, 16);
         file.perceptualHash = hashData;
       } catch (hashError) {
         console.error(`Error calculating perceptual hash for ${file.filePath}:`, hashError);
@@ -78,6 +76,7 @@ export class MetadataExtractor {
   private async extractVideoMetadata(file: File): Promise<void> {
     try {
       // For basic video metadata, we'll use music-metadata which can handle some video formats
+      const mm = await import('music-metadata');
       const metadata = await mm.parseFile(file.filePath);
 
       if (metadata.format) {
@@ -101,6 +100,7 @@ export class MetadataExtractor {
 
   private async extractAudioMetadata(file: File): Promise<void> {
     try {
+      const mm = await import('music-metadata');
       const metadata = await mm.parseFile(file.filePath);
 
       if (metadata.common) {
